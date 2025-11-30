@@ -25,18 +25,24 @@ public:
 
 private:
 	/**
-	 * Get the foot position relative to pelvis along the move axis
+	 * Get foot position relative to pelvis
 	 * @param Pose Animation pose at a given time
 	 * @param PelvisBone Name of the pelvis bone
 	 * @param FootBone Name of the foot bone
-	 * @param MoveAxis Primary movement axis
-	 * @return Distance along the move axis (positive = forward, negative = backward)
+	 * @return 3D position relative to pelvis
 	 */
-	float GetFootPositionAlongAxis(
+	FVector GetFootRelativePosition(
 		const struct FAnimPose& Pose,
 		FName PelvisBone,
-		FName FootBone,
-		const FVector& MoveAxis);
+		FName FootBone);
+
+	/**
+	 * Determine the primary movement axis from foot trajectory
+	 * Analyzes X and Y range to find the dominant movement direction
+	 * @param Positions Array of foot positions relative to pelvis
+	 * @return Normalized axis vector (X or Y dominant)
+	 */
+	FVector DeterminePrimaryMoveAxis(const TArray<FVector>& Positions);
 
 	/**
 	 * Interpolate the exact crossing time between two frames

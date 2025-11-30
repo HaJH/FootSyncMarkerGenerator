@@ -56,16 +56,24 @@ TArray<FFootContactResult> FPelvisCrossingDetector::DetectContacts(
 		return Results;
 	}
 
-	// Track positions along the move axis
-	TArray<float> Positions;
+	// Collect 3D relative positions for all frames
+	TArray<FVector> RelativePositions;
 	for (int32 i = 0; i < Poses.Num(); ++i)
 	{
-		float Position = GetFootPositionAlongAxis(
-			Poses[i], Preset.PelvisBoneName, Foot.BoneName, Preset.PrimaryMoveAxis);
-		Positions.Add(Position);
+		RelativePositions.Add(GetFootRelativePosition(Poses[i], Preset.PelvisBoneName, Foot.BoneName));
 	}
 
-	// Find zero crossings (pelvis line crossings)
+	// Determine primary movement axis from foot trajectory
+	FVector MoveAxis = DeterminePrimaryMoveAxis(RelativePositions);
+
+	// Project positions onto the determined move axis
+	TArray<float> Positions;
+	for (const FVector& RelPos : RelativePositions)
+	{
+		Positions.Add(FVector::DotProduct(RelPos, MoveAxis));
+	}
+
+	// Find zero crossings (pelvis line crossings along the determined axis)
 	for (int32 i = 1; i < Positions.Num(); ++i)
 	{
 		float PrevPos = Positions[i - 1];
@@ -106,15 +114,12 @@ TArray<FFootContactResult> FPelvisCrossingDetector::DetectContacts(
 		if (FirstPos * LastPos < 0.0f)
 		{
 			// There's a crossing between the last and first frame
-			// For looping animations, add a marker near the end or start
 			float LastTime = static_cast<float>(TimeIntervals.Last());
-			float FirstTime = static_cast<float>(TimeIntervals[0]);
 
-			// Use the end time as an approximation
 			bool bIsContact = (LastPos < 0.0f && FirstPos > 0.0f);
 
 			Results.Add(FFootContactResult(
-				LastTime,  // or could use FirstTime for start
+				LastTime,
 				Settings->LoopBoundaryConfidence,
 				bIsContact,
 				EFootContactDetectionMethod::PelvisCrossing
@@ -125,21 +130,53 @@ TArray<FFootContactResult> FPelvisCrossingDetector::DetectContacts(
 	return Results;
 }
 
-float FPelvisCrossingDetector::GetFootPositionAlongAxis(
+FVector FPelvisCrossingDetector::GetFootRelativePosition(
 	const FAnimPose& Pose,
 	FName PelvisBone,
-	FName FootBone,
-	const FVector& MoveAxis)
+	FName FootBone)
 {
 	// Get relative transform from pelvis to foot in world space
 	FTransform RelativeTransform = UAnimPoseExtensions::GetRelativeTransform(
 		Pose, PelvisBone, FootBone, EAnimPoseSpaces::World);
 
-	// Project the relative position onto the move axis
-	FVector RelativePosition = RelativeTransform.GetLocation();
-	float PositionAlongAxis = FVector::DotProduct(RelativePosition, MoveAxis);
+	return RelativeTransform.GetLocation();
+}
 
-	return PositionAlongAxis;
+FVector FPelvisCrossingDetector::DeterminePrimaryMoveAxis(const TArray<FVector>& Positions)
+{
+	if (Positions.Num() < 2)
+	{
+		return FVector::ForwardVector;
+	}
+
+	// Find min/max for X and Y axes
+	float MinX = TNumericLimits<float>::Max();
+	float MaxX = TNumericLimits<float>::Lowest();
+	float MinY = TNumericLimits<float>::Max();
+	float MaxY = TNumericLimits<float>::Lowest();
+
+	for (const FVector& Pos : Positions)
+	{
+		MinX = FMath::Min(MinX, Pos.X);
+		MaxX = FMath::Max(MaxX, Pos.X);
+		MinY = FMath::Min(MinY, Pos.Y);
+		MaxY = FMath::Max(MaxY, Pos.Y);
+	}
+
+	float XRange = MaxX - MinX;
+	float YRange = MaxY - MinY;
+
+	// Choose the axis with greater range as the primary movement axis
+	if (YRange > XRange)
+	{
+		// Y-axis dominant (strafing)
+		return FVector::RightVector;
+	}
+	else
+	{
+		// X-axis dominant (forward/backward)
+		return FVector::ForwardVector;
+	}
 }
 
 float FPelvisCrossingDetector::InterpolateCrossingTime(
