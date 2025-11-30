@@ -96,4 +96,4 @@ FootSyncMarkerGenerator/
 
 ## License
 
-Copyright HyphenGames. All Rights Reserved.
+MIT License - see [LICENSE](LICENSE) for details.
