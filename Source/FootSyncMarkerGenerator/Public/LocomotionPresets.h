@@ -149,17 +149,17 @@ struct FOOTSYNCMARKERGENERATOR_API FCompositeDetectionWeights
 	/** Weight for pelvis crossing detection (0.0 - 1.0) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weights",
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float PelvisCrossingWeight = 0.4f;
+	float PelvisCrossingWeight = 0.25f;
 
 	/** Weight for velocity curve detection (0.0 - 1.0) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weights",
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float VelocityCurveWeight = 0.3f;
+	float VelocityCurveWeight = 0.25f;
 
 	/** Weight for saliency detection (0.0 - 1.0) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weights",
 		meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float SaliencyWeight = 0.3f;
+	float SaliencyWeight = 0.5f;
 };
 
 /**
